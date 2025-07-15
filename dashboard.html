@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仪表板 - INEY 个人代币发行平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 多个ethers.js CDN源，确保加载成功 -->
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="text/javascript"></script>
+    <script>
+        // 如果ethers加载失败，使用备用CDN
+        if (typeof ethers === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"><\/script>');
+        }
+    </script>
+    <style>
+        .dashboard-header {
+            background: linear-gradient(135deg, #0052ff 0%, #1652f0 100%);
+            color: white;
+            padding: 40px 0;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            height: 100%;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #0052ff;
+            margin-bottom: 10px;
+        }
+        .contract-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #0052ff;
+        }
+        .network-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        .contract-address {
+            font-family: 'Courier New', monospace;
+            background: #e9ecef;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+        .activity-item {
+            border-left: 3px solid #0052ff;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+        }
+        .network-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- 网络状态显示 -->
+    <div id="networkStatus" class="network-status"></div>
+
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="index.html">🪙 INEY 个人代币平台</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="create.html">创建代币</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="trading.html">交易</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="dashboard.html">仪表板</a>
+                    </li>
+                </ul>
+                <button id="connectWallet" class="btn btn-outline-primary">
+                    <i class="fas fa-wallet me-2"></i>连接钱包
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 仪表板头部 -->
+    <section class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-6 fw-bold mb-3">📊 平台仪表板</h1>
+                    <p class="lead">Base 主网平台统计和合约信息</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="network-info text-dark">
+                        <div class="row text-center">
+                            <div class="col-12">
+                                <strong>Base Mainnet</strong><br>
+                                <small>Chain ID: 8453</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 统计概览 -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">📈 平台统计</h2>
+            <div class="row" id="statsContainer">
+                <div class="col-md-3 mb-4">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalTokens">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <h5>已创建代币</h5>
+                        <p class="text-muted">总代币创建数量</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalUsers">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <h5>活跃用户</h5>
+                        <p class="text-muted">使用平台的用户数</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalValue">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <h5>锁定价值 (ETH)</h5>
+                        <p class="text-muted">平台总锁定价值</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="stat-card">
+                        <div class="stat-number" id="platformFees">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <h5>平台费用 (ETH)</h5>
+                        <p class="text-muted">累计收取费用</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 合约信息 -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-5">🔗 智能合约信息</h2>
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <div class="contract-card">
+                        <h5 class="fw-bold mb-3">
+                            <i class="fas fa-factory-line me-2 text-primary"></i>SimpleTokenFactory
+                        </h5>
+                        <p class="text-muted">代币工厂合约，处理代币创建请求</p>
+                        <div class="contract-address mb-3">0x09F80281c90d574B4C5769cf2308ea4B70b4f468</div>
+                        <div class="d-flex gap-2">
+                            <a href="https://basescan.org/address/0x09F80281c90d574B4C5769cf2308ea4B70b4f468" 
+                               target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-external-link-alt me-1"></i>浏览器查看
+                            </a>
+                            <button class="btn btn-sm btn-outline-success" onclick="interactWithFactory()">
+                                <i class="fas fa-play me-1"></i>交互测试
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 mb-4">
+                    <div class="contract-card">
+                        <h5 class="fw-bold mb-3">
+                            <i class="fas fa-coins me-2 text-success"></i>PersonalToken
+                        </h5>
+                        <p class="text-muted">INEY 个人代币模板合约</p>
+                        <div class="contract-address mb-3">0xd3F54d1e5909a8ae1E15DBf1e27825e716B26d0E</div>
+                        <div class="d-flex gap-2">
+                            <a href="https://basescan.org/address/0xd3F54d1e5909a8ae1E15DBf1e27825e716B26d0E" 
+                               target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-external-link-alt me-1"></i>浏览器查看
+                            </a>
+                            <button class="btn btn-sm btn-outline-success" onclick="checkTokenInfo()">
+                                <i class="fas fa-info me-1"></i>查看信息
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 mb-4">
+                    <div class="contract-card">
+                        <h5 class="fw-bold mb-3">
+                            <i class="fas fa-exchange-alt me-2 text-info"></i>SimpleAMM
+                        </h5>
+                        <p class="text-muted">自动做市商合约</p>
+                        <div class="contract-address mb-3">0x8C53A213B97B52989BCCE04fE306464e6767BC75</div>
+                        <div class="d-flex gap-2">
+                            <a href="https://basescan.org/address/0x8C53A213B97B52989BCCE04fE306464e6767BC75" 
+                               target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-external-link-alt me-1"></i>浏览器查看
+                            </a>
+                            <button class="btn btn-sm btn-outline-success" onclick="checkAMMInfo()">
+                                <i class="fas fa-chart-line me-1"></i>AMM信息
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 最近活动 -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">📰 平台动态</h2>
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold">🎉 平台成功部署到 Base 主网</h6>
+                                <p class="text-muted mb-2">所有核心合约已部署完成并通过验证测试</p>
+                                <small class="text-muted">2025-07-14 23:48:00</small>
+                            </div>
+                            <span class="badge bg-success">完成</span>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold">🏭 SimpleTokenFactory 首次创建测试</h6>
+                                <p class="text-muted mb-2">成功处理第一个代币创建请求，平台费用机制正常工作</p>
+                                <small class="text-muted">2025-07-14 23:47:00</small>
+                            </div>
+                            <span class="badge bg-success">成功</span>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold">📱 PersonalToken 模板部署</h6>
+                                <p class="text-muted mb-2">Template Token (TMPL) 已部署，1M代币供应量</p>
+                                <small class="text-muted">2025-07-14 23:42:00</small>
+                            </div>
+                            <span class="badge bg-success">完成</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 信息模态框 -->
+    <div class="modal fade" id="infoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="infoModalTitle">合约信息</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="infoModalBody">
+                    <!-- 内容将通过JavaScript插入 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 网络配置
+        const NETWORK_CONFIG = {
+            chainId: 8453,
+            name: "Base Mainnet",
+            rpcUrl: "https://mainnet.base.org",
+            explorer: "https://basescan.org",
+            contracts: {
+                TokenFactory: "0x09F80281c90d574B4C5769cf2308ea4B70b4f468",
+                PersonalToken: "0xd3F54d1e5909a8ae1E15DBf1e27825e716B26d0E",
+                SimpleAMM: "0x8C53A213B97B52989BCCE04fE306464e6767BC75"
+            }
+        };
+
+        // 合约 ABI
+        const TOKEN_FACTORY_ABI = [
+            "function creationFee() external view returns (uint256)",
+            "function totalTokensCreated() external view returns (uint256)",
+            "function totalFeesCollected() external view returns (uint256)",
+            "function getUserTokenCount(address user) external view returns (uint256)"
+        ];
+
+        const PERSONAL_TOKEN_ABI = [
+            "function name() external view returns (string)",
+            "function symbol() external view returns (string)",
+            "function totalSupply() external view returns (uint256)",
+            "function decimals() external view returns (uint8)",
+            "function balanceOf(address account) external view returns (uint256)",
+            "function owner() external view returns (address)"
+        ];
+
+        let provider = null;
+        let signer = null;
+        let userAccount = null;
+
+        // 确保ethers库加载完成后再初始化
+        function initializeApp() {
+            if (typeof ethers === 'undefined') {
+                console.error('ethers库未加载，等待重试...');
+                setTimeout(initializeApp, 500);
+                return;
+            }
+            
+            console.log('ethers库加载成功，版本:', ethers.version);
+            initializeWeb3();
+            loadDashboardData();
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initializeApp, 100);
+        });
+
+        // 初始化Web3
+        async function initializeWeb3() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    
+                    // 检查是否已连接
+                    const accounts = await window.ethereum.request({method: 'eth_accounts'});
+                    if (accounts.length > 0) {
+                        await connectWallet();
+                    }
+                } catch (error) {
+                    console.error('初始化Web3失败:', error);
+                    showNetworkStatus('error', '初始化失败: ' + error.message);
+                }
+            } else {
+                showNetworkStatus('warning', '请安装MetaMask钱包');
+            }
+        }
+
+        // 连接钱包
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showNetworkStatus('error', '请安装MetaMask钱包');
+                    return;
+                }
+
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+                
+                if (!accounts || accounts.length === 0) {
+                    showNetworkStatus('error', '没有找到账户，请检查MetaMask');
+                    return;
+                }
+                
+                userAccount = accounts[0];
+                
+                if (!provider) {
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                }
+                
+                try {
+                    signer = provider.getSigner();
+                } catch (signerError) {
+                    console.error('获取Signer失败:', signerError);
+                    showNetworkStatus('error', '获取签名器失败: ' + signerError.message);
+                    return;
+                }
+                
+                // 检查网络
+                try {
+                    const network = await provider.getNetwork();
+                    
+                    if (network.chainId !== NETWORK_CONFIG.chainId) {
+                        showNetworkStatus('warning', '请切换到Base主网');
+                        return;
+                    }
+                } catch (networkError) {
+                    console.error('获取网络信息失败:', networkError);
+                    showNetworkStatus('warning', '无法获取网络信息，请检查连接');
+                }
+                
+                showNetworkStatus('success', `已连接: ${userAccount.slice(0,6)}...${userAccount.slice(-4)}`);
+                updateConnectButton(true);
+                
+                // 重新加载实时数据
+                loadLiveData();
+                
+            } catch (error) {
+                console.error('连接钱包详细错误:', error);
+                
+                let errorMessage = '连接失败';
+                if (error.code === 4001) {
+                    errorMessage = '用户拒绝了连接请求';
+                } else if (error.code === -32002) {
+                    errorMessage = 'MetaMask正在处理请求，请等待';
+                } else if (error.message) {
+                    errorMessage = '连接失败: ' + error.message;
+                } else {
+                    errorMessage = '连接失败: 未知错误';
+                }
+                
+                showNetworkStatus('error', errorMessage);
+            }
+        }
+
+        // 加载仪表板数据
+        async function loadDashboardData() {
+            try {
+                // 静态版本显示固定数据
+                document.getElementById('totalTokens').textContent = '1';
+                document.getElementById('totalUsers').textContent = '1';
+                document.getElementById('totalValue').textContent = '0.001';
+                document.getElementById('platformFees').textContent = '0.001';
+                
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+                // 显示默认数据
+                document.getElementById('totalTokens').textContent = '1';
+                document.getElementById('totalUsers').textContent = '1';
+                document.getElementById('totalValue').textContent = '0.001';
+                document.getElementById('platformFees').textContent = '0.001';
+            }
+        }
+
+        // 加载实时数据
+        async function loadLiveData() {
+            if (!provider) return;
+
+            try {
+                // 连接到TokenFactory合约获取实时数据
+                const factoryContract = new ethers.Contract(
+                    NETWORK_CONFIG.contracts.TokenFactory,
+                    TOKEN_FACTORY_ABI,
+                    provider
+                );
+
+                const totalCreated = await factoryContract.totalTokensCreated();
+                const totalFees = await factoryContract.totalFeesCollected();
+                
+                document.getElementById('totalTokens').textContent = totalCreated.toString();
+                document.getElementById('platformFees').textContent = ethers.utils.formatEther(totalFees);
+
+            } catch (error) {
+                console.error('加载实时数据失败:', error);
+            }
+        }
+
+        // 与TokenFactory交互
+        async function interactWithFactory() {
+            if (!provider) {
+                showNetworkStatus('warning', '请先连接钱包');
+                return;
+            }
+
+            try {
+                const factoryContract = new ethers.Contract(
+                    NETWORK_CONFIG.contracts.TokenFactory,
+                    TOKEN_FACTORY_ABI,
+                    provider
+                );
+
+                const creationFee = await factoryContract.creationFee();
+                const totalCreated = await factoryContract.totalTokensCreated();
+                const totalFees = await factoryContract.totalFeesCollected();
+
+                let userTokenCount = '未连接钱包';
+                if (userAccount) {
+                    const userCount = await factoryContract.getUserTokenCount(userAccount);
+                    userTokenCount = userCount.toString();
+                }
+
+                showInfoModal('SimpleTokenFactory 合约信息', `
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">创建费用</label>
+                            <div class="form-control">${ethers.utils.formatEther(creationFee)} ETH</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">已创建代币总数</label>
+                            <div class="form-control">${totalCreated.toString()}</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">已收集费用</label>
+                            <div class="form-control">${ethers.utils.formatEther(totalFees)} ETH</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">您的代币数量</label>
+                            <div class="form-control">${userTokenCount}</div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>合约功能：</strong>
+                        <ul class="mb-0">
+                            <li>requestTokenCreation() - 请求创建代币</li>
+                            <li>setCreationFee() - 设置创建费用 (仅所有者)</li>
+                            <li>withdrawFees() - 提取平台费用 (仅所有者)</li>
+                        </ul>
+                    </div>
+                `);
+
+            } catch (error) {
+                console.error('获取合约信息失败:', error);
+                showNetworkStatus('error', '获取合约信息失败: ' + error.message);
+            }
+        }
+
+        // 检查代币信息
+        async function checkTokenInfo() {
+            if (!provider) {
+                showNetworkStatus('warning', '请先连接钱包');
+                return;
+            }
+
+            try {
+                const tokenContract = new ethers.Contract(
+                    NETWORK_CONFIG.contracts.PersonalToken,
+                    PERSONAL_TOKEN_ABI,
+                    provider
+                );
+
+                const name = await tokenContract.name();
+                const symbol = await tokenContract.symbol();
+                const totalSupply = await tokenContract.totalSupply();
+                const decimals = await tokenContract.decimals();
+                const owner = await tokenContract.owner();
+
+                let userBalance = '未连接钱包';
+                if (userAccount) {
+                    const balance = await tokenContract.balanceOf(userAccount);
+                    userBalance = ethers.utils.formatEther(balance) + ' ' + symbol;
+                }
+
+                showInfoModal('PersonalToken 模板信息', `
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">代币名称</label>
+                            <div class="form-control">${name}</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">代币符号</label>
+                            <div class="form-control">${symbol}</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">总供应量</label>
+                            <div class="form-control">${ethers.utils.formatEther(totalSupply)} ${symbol}</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">小数位数</label>
+                            <div class="form-control">${decimals.toString()}</div>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold">所有者</label>
+                            <div class="form-control font-monospace">${owner}</div>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label fw-bold">您的余额</label>
+                            <div class="form-control">${userBalance}</div>
+                        </div>
+                    </div>
+                    <div class="alert alert-success">
+                        <strong>这是个人代币模板：</strong> 所有通过平台创建的代币都会基于这个模板，包含ERC-20标准功能和扩展特性。
+                    </div>
+                `);
+
+            } catch (error) {
+                console.error('获取代币信息失败:', error);
+                showNetworkStatus('error', '获取代币信息失败: ' + error.message);
+            }
+        }
+
+        // 检查AMM信息
+        async function checkAMMInfo() {
+            showInfoModal('SimpleAMM 自动做市商', `
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exchange-alt me-2"></i>SimpleAMM 功能说明
+                    </h6>
+                    <ul class="mb-0">
+                        <li><strong>流动性池管理</strong> - 为代币对提供流动性</li>
+                        <li><strong>自动价格发现</strong> - 基于供需关系自动调整价格</li>
+                        <li><strong>代币交换</strong> - 支持任意ERC-20代币交换</li>
+                        <li><strong>流动性挖矿</strong> - 为流动性提供者分配奖励</li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-info-circle me-2"></i>开发状态
+                    </h6>
+                    <p class="mb-0">
+                        SimpleAMM 合约已部署，但交易功能需要与实际的PersonalToken实例配合使用。
+                        当前版本支持基础的AMM功能，未来将添加更多高级特性。
+                    </p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label fw-bold">合约地址</label>
+                        <div class="contract-address">${NETWORK_CONFIG.contracts.SimpleAMM}</div>
+                    </div>
+                </div>
+            `);
+        }
+
+        // 显示信息模态框
+        function showInfoModal(title, content) {
+            document.getElementById('infoModalTitle').textContent = title;
+            document.getElementById('infoModalBody').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('infoModal')).show();
+        }
+
+        // 显示网络状态
+        function showNetworkStatus(type, message) {
+            const statusDiv = document.getElementById('networkStatus');
+            const alertClass = type === 'success' ? 'alert-success' : 
+                              type === 'warning' ? 'alert-warning' : 'alert-danger';
+            
+            statusDiv.innerHTML = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check' : type === 'warning' ? 'exclamation-triangle' : 'times'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+
+        // 更新连接按钮
+        function updateConnectButton(connected) {
+            const btn = document.getElementById('connectWallet');
+            if (connected) {
+                btn.textContent = '已连接';
+                btn.className = 'btn btn-success';
+            } else {
+                btn.innerHTML = '<i class="fas fa-wallet me-2"></i>连接钱包';
+                btn.className = 'btn btn-outline-primary';
+            }
+        }
+
+        // 事件监听器
+        document.getElementById('connectWallet').addEventListener('click', connectWallet);
+
+        // 监听账户和网络变化
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', function (accounts) {
+                if (accounts.length === 0) {
+                    userAccount = null;
+                    signer = null;
+                    updateConnectButton(false);
+                    showNetworkStatus('warning', '钱包已断开连接');
+                } else {
+                    connectWallet();
+                }
+            });
+
+            window.ethereum.on('chainChanged', function (chainId) {
+                window.location.reload();
+            });
+        }
+
+        // 定期刷新数据
+        setInterval(loadLiveData, 30000); // 每30秒刷新一次
+    </script>
+</body>
+</html> 
