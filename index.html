@@ -171,19 +171,19 @@
             <div class="row">
                 <div class="col-md-3 stat-item">
                     <div class="stat-number" id="totalTokens">1</div>
-                    <p class="text-muted">已创建代币（此数据为过期数据，请移至仪表盘查看）</p>
+                    <p class="text-muted">已创建代币</p>
                 </div>
                 <div class="col-md-3 stat-item">
                     <div class="stat-number" id="totalUsers">1</div>
-                    <p class="text-muted">活跃用户（此数据为过期数据，请移至仪表盘查看）</p>
+                    <p class="text-muted">活跃用户</p>
                 </div>
                 <div class="col-md-3 stat-item">
                     <div class="stat-number" id="totalValue">0.001</div>
-                    <p class="text-muted">锁定价值 (ETH)（此数据为过期数据，请移至仪表盘查看）</p>
+                    <p class="text-muted">锁定价值 (ETH)</p>
                 </div>
                 <div class="col-md-3 stat-item">
                     <div class="stat-number" id="platformFees">0.001</div>
-                    <p class="text-muted">平台费用 (ETH)（此数据为过期数据，请移至仪表盘查看）</p>
+                    <p class="text-muted">平台费用 (ETH)</p>
                 </div>
             </div>
         </div>
@@ -535,15 +535,12 @@
                     connectWallet();
                 }
             });
-            
+
             // 监听网络变化
             window.ethereum.on('chainChanged', function (chainId) {
                 window.location.reload();
             });
         }
-        
-        // 定期刷新数据
-        setInterval(loadLiveData, 30000); // 每30秒刷新一次
     </script>
 </body>
 </html> 
