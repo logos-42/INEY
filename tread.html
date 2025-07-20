@@ -104,11 +104,11 @@
                 <div class="trade-card">
                     <!-- 代币选择 -->
                     <div class="row mb-4">
-                        <div class="col-md-6">
+            <div class="col-md-6">
                             <h5><i class="fas fa-coins me-2"></i>选择代币</h5>
-                            <select id="token-select" class="form-control">
-                                <option value="">-- 选择代币 --</option>
-                            </select>
+                <select id="token-select" class="form-control">
+                    <option value="">-- 选择代币 --</option>
+                </select>
                             <div class="form-text">选择要交易的代币</div>
                         </div>
                         <div class="col-md-6">
@@ -122,8 +122,8 @@
                             <button class="btn btn-outline-info" onclick="showAddTokenModal()">
                                 <i class="fas fa-coin me-1"></i>添加代币
                             </button>
-                        </div>
-                    </div>
+            </div>
+        </div>
 
                     <!-- 代币信息显示 -->
                     <div id="token-info" class="token-info" style="display: none;">
@@ -198,7 +198,7 @@
                         <div class="form-group mb-3">
                             <label class="form-label">预估获得</label>
                             <div class="input-group">
-                                <input type="text" id="estimate-output" class="form-control" readonly>
+                        <input type="text" id="estimate-output" class="form-control" readonly>
                                 <span class="input-group-text" id="output-currency">Token</span>
                             </div>
                             <div class="form-text">预计可以获得的数量（已扣除0.3%手续费）</div>
@@ -443,22 +443,22 @@
                 userAccount = accounts[0];
                 
                 if (!provider) {
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                provider = new ethers.providers.Web3Provider(window.ethereum);
                 }
                 
                 try {
-                    signer = provider.getSigner();
+                signer = provider.getSigner();
                 } catch (signerError) {
                     console.error('获取Signer失败:', signerError);
                     showNetworkStatus('error', '获取签名器失败: ' + signerError.message);
                     return;
                 }
-                
+
                 // 检查网络
                 try {
-                    const network = await provider.getNetwork();
+                const network = await provider.getNetwork();
                     
-                    if (network.chainId !== NETWORK_CONFIG.chainId) {
+                if (network.chainId !== NETWORK_CONFIG.chainId) {
                         await switchToBaseMainnet();
                         return;
                     }
@@ -512,11 +512,11 @@
 
         // 切换到Base主网
         async function switchToBaseMainnet() {
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: '0x' + NETWORK_CONFIG.chainId.toString(16) }],
-                });
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x' + NETWORK_CONFIG.chainId.toString(16) }],
+                        });
                 
                 setTimeout(connectWallet, 1000);
                 
@@ -599,9 +599,9 @@
                 // 4. 为每个代币添加到选择器
                 for (const tokenAddress of allTokens) {
                     try {
-                        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-                        const name = await tokenContract.name();
-                        const symbol = await tokenContract.symbol();
+                    const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+                    const name = await tokenContract.name();
+                    const symbol = await tokenContract.symbol();
                         
                         // 检查是否有流动性池
                         let poolStatus = '';
@@ -612,8 +612,8 @@
                             poolStatus = ' ❌';
                         }
                         
-                        const option = document.createElement('option');
-                        option.value = tokenAddress;
+                    const option = document.createElement('option');
+                    option.value = tokenAddress;
                         option.text = `${name} (${symbol})${poolStatus}`;
                         tokenSelect.appendChild(option.cloneNode(true));
                         
@@ -651,8 +651,8 @@
 
             // 代币选择
             document.getElementById('token-select').addEventListener('change', function() {
-                const tokenAddress = this.value;
-                if (tokenAddress) {
+            const tokenAddress = this.value;
+            if (tokenAddress) {
                     loadTokenInfo(tokenAddress);
                 } else {
                     hideTokenInfo();
@@ -772,7 +772,7 @@
         function hideTokenInfo() {
             document.getElementById('token-info').style.display = 'none';
             document.getElementById('price-info').style.display = 'none';
-            document.getElementById('trade-panel').style.display = 'none';
+                document.getElementById('trade-panel').style.display = 'none';
             selectedToken = null;
         }
 
@@ -790,8 +790,8 @@
             }
 
             try {
-                const FEE_RATE = 300;
-                const FEE_DENOMINATOR = 100000;
+            const FEE_RATE = 300;
+            const FEE_DENOMINATOR = 100000;
 
                 if (currentTradeType === 'buy') {
                     // 购买代币：ETH -> Token
@@ -805,7 +805,7 @@
                     document.getElementById('estimate-output').value = 
                         ethers.utils.formatUnits(tokenOut, selectedToken.decimals);
                         
-                } else {
+            } else {
                     // 出售代币：Token -> ETH
                     const tokenAmount = ethers.utils.parseUnits(amountInput, selectedToken.decimals);
                     const tokenAmountWithFee = tokenAmount.mul(FEE_DENOMINATOR - FEE_RATE).div(FEE_DENOMINATOR);
@@ -1114,31 +1114,94 @@
 
         // 验证代币
         async function verifyToken() {
-            const address = document.getElementById('token-address-input').value.trim();
+            const input = document.getElementById('token-address-input').value.trim();
             const verificationDiv = document.getElementById('token-verification');
             const addBtn = document.getElementById('add-token-btn');
             
-            if (!address || !ethers.utils.isAddress(address)) {
+            if (!input) {
                 verificationDiv.className = 'alert alert-danger';
-                verificationDiv.innerHTML = '<strong>错误:</strong> 请输入有效的合约地址';
+                verificationDiv.innerHTML = '<strong>错误:</strong> 请输入合约地址或交易哈希';
+                verificationDiv.style.display = 'block';
+                addBtn.disabled = true;
+                return;
+            }
+
+            let address = input;
+            
+            // 检查是否是交易哈希（66字符）而不是地址（42字符）
+            if (input.length === 66 && input.startsWith('0x')) {
+                verificationDiv.className = 'alert alert-info';
+                verificationDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>检测到交易哈希，正在获取合约地址...';
+                verificationDiv.style.display = 'block';
+                
+                try {
+                    const txReceipt = await provider.getTransactionReceipt(input);
+                    if (!txReceipt) {
+                        throw new Error('交易不存在或尚未确认');
+                    }
+                    
+                    if (!txReceipt.contractAddress) {
+                        throw new Error('此交易没有创建合约');
+                    }
+                    
+                    address = txReceipt.contractAddress;
+                    verificationDiv.className = 'alert alert-success';
+                    verificationDiv.innerHTML = `<strong>找到合约地址:</strong> ${address}`;
+                } catch (error) {
+                    console.error('从交易哈希获取合约地址失败:', error);
+                    verificationDiv.className = 'alert alert-danger';
+                    verificationDiv.innerHTML = `<strong>错误:</strong> 无法从交易哈希获取合约地址 - ${error.message}`;
+                    verificationDiv.style.display = 'block';
+                    addBtn.disabled = true;
+                    return;
+                }
+            } else if (!ethers.utils.isAddress(address)) {
+                verificationDiv.className = 'alert alert-danger';
+                verificationDiv.innerHTML = '<strong>错误:</strong> 请输入有效的合约地址（42字符）或交易哈希（66字符）';
+                verificationDiv.style.display = 'block';
+                addBtn.disabled = true;
+                return;
+            }
+            
+            // 验证是否是合约
+            try {
+                const code = await provider.getCode(address);
+                if (code === '0x') {
+                    verificationDiv.className = 'alert alert-danger';
+                    verificationDiv.innerHTML = '<strong>错误:</strong> 该地址不是合约地址';
+                    verificationDiv.style.display = 'block';
+                    addBtn.disabled = true;
+                    return;
+                }
+            } catch (error) {
+                console.error('检查合约代码失败:', error);
+                verificationDiv.className = 'alert alert-danger';
+                verificationDiv.innerHTML = `<strong>错误:</strong> 无法检查合约 - ${error.message}`;
                 verificationDiv.style.display = 'block';
                 addBtn.disabled = true;
                 return;
             }
             
             try {
+                verificationDiv.className = 'alert alert-info';
+                verificationDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>正在验证ERC20代币合约...';
+                verificationDiv.style.display = 'block';
+                
                 const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
                 
                 // 验证代币信息
-                const name = await tokenContract.name();
-                const symbol = await tokenContract.symbol();
-                const decimals = await tokenContract.decimals();
-                const totalSupply = await tokenContract.totalSupply();
+                const [name, symbol, decimals, totalSupply] = await Promise.all([
+                    tokenContract.name().catch(() => '未知'),
+                    tokenContract.symbol().catch(() => '未知'), 
+                    tokenContract.decimals().catch(() => 18),
+                    tokenContract.totalSupply().catch(() => ethers.BigNumber.from(0))
+                ]);
                 
                 verificationDiv.className = 'alert alert-success';
                 verificationDiv.innerHTML = `
                     <h6><i class="fas fa-check-circle me-2"></i>代币验证成功</h6>
                     <div class="row">
+                        <div class="col-12 mb-2"><strong>合约地址:</strong><br><small class="font-monospace">${address}</small></div>
                         <div class="col-6"><strong>名称:</strong> ${name}</div>
                         <div class="col-6"><strong>符号:</strong> ${symbol}</div>
                         <div class="col-6"><strong>精度:</strong> ${decimals}</div>
@@ -1158,8 +1221,29 @@
                 
             } catch (error) {
                 console.error('验证代币失败:', error);
+                let errorMsg = error.message;
+                
+                // 提供更友好的错误信息
+                if (errorMsg.includes('call revert exception')) {
+                    errorMsg = '合约不支持ERC20标准接口，或者网络连接问题';
+                } else if (errorMsg.includes('name')) {
+                    errorMsg = '无法获取代币名称，可能不是标准ERC20代币';
+                } else if (errorMsg.includes('symbol')) {
+                    errorMsg = '无法获取代币符号，可能不是标准ERC20代币';
+                }
+                
                 verificationDiv.className = 'alert alert-danger';
-                verificationDiv.innerHTML = `<strong>错误:</strong> 无法验证代币合约 - ${error.message}`;
+                verificationDiv.innerHTML = `
+                    <h6><strong>验证失败</strong></h6>
+                    <p><strong>错误:</strong> ${errorMsg}</p>
+                    <p class="mb-0"><strong>可能原因:</strong></p>
+                    <ul class="mb-0">
+                        <li>合约未实现标准ERC20接口</li>
+                        <li>网络连接问题</li>
+                        <li>合约地址错误</li>
+                        <li>合约尚未完全部署</li>
+                    </ul>
+                `;
                 verificationDiv.style.display = 'block';
                 addBtn.disabled = true;
             }
