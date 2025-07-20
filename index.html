@@ -535,12 +535,15 @@
                     connectWallet();
                 }
             });
-
+            
             // 监听网络变化
             window.ethereum.on('chainChanged', function (chainId) {
                 window.location.reload();
             });
         }
+        
+        // 定期刷新数据
+        setInterval(loadLiveData, 30000); // 每30秒刷新一次
     </script>
 </body>
 </html> 
