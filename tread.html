@@ -116,8 +116,11 @@
                             <button id="refresh-tokens" class="btn btn-outline-primary me-2" onclick="loadAllTokens()">
                                 <i class="fas fa-refresh me-1"></i>刷新代币列表
                             </button>
-                            <button id="create-test-pool" class="btn btn-outline-success" onclick="showCreatePoolModal()">
+                            <button id="create-test-pool" class="btn btn-outline-success me-2" onclick="showCreatePoolModal()">
                                 <i class="fas fa-plus me-1"></i>创建测试池
+                            </button>
+                            <button class="btn btn-outline-info" onclick="showAddTokenModal()">
+                                <i class="fas fa-coin me-1"></i>添加代币
                             </button>
                         </div>
                     </div>
@@ -227,12 +230,13 @@
                     </div>
 
                                          <!-- 提示信息 -->
-                     <div class="alert alert-info">
-                         <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>使用说明</h6>
+                     <div class="alert alert-warning">
+                         <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>重要说明</h6>
                          <ul class="mb-0">
                              <li>请先连接MetaMask钱包并确保在Base主网</li>
-                             <li>目前可交易的代币：PTT模板代币（需要先创建流动性池）</li>
-                             <li>SimpleTokenFactory只记录代币创建请求，实际代币需要手动部署</li>
+                             <li>您的SimpleTokenFactory(0x09F8...f468)只记录代币创建请求</li>
+                             <li>实际代币需要您单独部署，然后使用"添加代币"功能添加</li>
+                             <li>只添加通过您的系统创建的代币，避免安全风险</li>
                              <li>交易需要支付0.3%的手续费</li>
                              <li>建议设置适当的滑点容忍度</li>
                          </ul>
@@ -272,6 +276,42 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                     <button type="button" class="btn btn-primary" onclick="createPool()">创建池</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加代币模态框 -->
+    <div class="modal fade" id="addTokenModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">添加真实代币</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>重要说明</h6>
+                        <ul class="mb-0">
+                            <li>SimpleTokenFactory只记录代币创建请求</li>
+                            <li>实际代币需要您单独部署</li>
+                            <li>请确保代币地址是通过您的系统创建的</li>
+                            <li>添加不明代币存在安全风险</li>
+                        </ul>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">代币合约地址</label>
+                        <input type="text" id="token-address-input" class="form-control" placeholder="0x..." maxlength="42">
+                        <div class="form-text">输入已部署的代币合约地址</div>
+                    </div>
+                    <div id="token-verification" class="alert" style="display: none;">
+                        <!-- 代币验证结果 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-info" onclick="verifyToken()">验证代币</button>
+                    <button type="button" class="btn btn-primary" onclick="addToken()" disabled id="add-token-btn">添加代币</button>
                 </div>
             </div>
         </div>
@@ -541,15 +581,15 @@
                     console.log('获取AMM池代币失败:', error);
                 }
 
-                // 2. 添加已知代币（PersonalToken模板和其他已创建的代币）
-                const knownTokens = [
-                    NETWORK_CONFIG.contracts.PersonalToken  // PTT模板代币
-                    // 注意：SimpleTokenFactory只记录请求，不实际创建合约
-                    // 真实代币地址需要在这里手动添加
-                ];
+                // 2. 获取用户通过SimpleTokenFactory创建的真实代币
+                // 注意：SimpleTokenFactory只记录创建请求，真实代币需要用户单独部署
+                const userCreatedTokens = await getUserCreatedTokens();
                 
-                // 3. 合并所有代币地址
-                const allTokens = [...new Set([...poolTokens, ...knownTokens])];
+                // 3. 从localStorage获取用户手动添加的代币
+                const manualTokens = getManuallyAddedTokens();
+                
+                // 4. 合并所有代币地址
+                const allTokens = [...new Set([...poolTokens, ...userCreatedTokens, ...manualTokens])];
                 
                 if (allTokens.length === 0) {
                     showNetworkStatus('warning', '没有找到可交易的代币');
@@ -1009,6 +1049,146 @@
             } else {
                 btn.innerHTML = '<i class="fas fa-wallet me-2"></i>连接钱包';
                 btn.className = 'btn btn-primary';
+            }
+        }
+
+        // 获取用户通过SimpleTokenFactory创建的代币
+        async function getUserCreatedTokens() {
+            if (!userAccount || !simpleTokenFactoryContract) {
+                return [];
+            }
+            
+            try {
+                // 这里可以添加从事件日志获取用户创建请求的逻辑
+                // 但由于SimpleTokenFactory只记录请求，不包含实际部署地址
+                // 暂时返回空数组，用户需要手动添加已部署的代币
+                return [];
+            } catch (error) {
+                console.error('获取用户创建代币失败:', error);
+                return [];
+            }
+        }
+
+        // 从localStorage获取手动添加的代币
+        function getManuallyAddedTokens() {
+            try {
+                const saved = localStorage.getItem('userTokens');
+                const tokens = saved ? JSON.parse(saved) : [];
+                // 返回地址数组以便与其他代币数组合并
+                return tokens.map(token => token.address);
+            } catch (error) {
+                console.error('获取本地代币失败:', error);
+                return [];
+            }
+        }
+
+        // 保存代币到localStorage
+        function saveTokenToLocal(address, info) {
+            try {
+                // 获取完整的token对象列表（不只是地址）
+                const saved = localStorage.getItem('userTokens');
+                const tokens = saved ? JSON.parse(saved) : [];
+                
+                const tokenData = {
+                    address: address,
+                    name: info.name,
+                    symbol: info.symbol,
+                    addedAt: Date.now()
+                };
+                
+                // 避免重复添加
+                if (!tokens.find(t => t.address.toLowerCase() === address.toLowerCase())) {
+                    tokens.push(tokenData);
+                    localStorage.setItem('userTokens', JSON.stringify(tokens));
+                }
+            } catch (error) {
+                console.error('保存代币失败:', error);
+            }
+        }
+
+        // 显示添加代币模态框
+        function showAddTokenModal() {
+            const modal = new bootstrap.Modal(document.getElementById('addTokenModal'));
+            modal.show();
+        }
+
+        // 验证代币
+        async function verifyToken() {
+            const address = document.getElementById('token-address-input').value.trim();
+            const verificationDiv = document.getElementById('token-verification');
+            const addBtn = document.getElementById('add-token-btn');
+            
+            if (!address || !ethers.utils.isAddress(address)) {
+                verificationDiv.className = 'alert alert-danger';
+                verificationDiv.innerHTML = '<strong>错误:</strong> 请输入有效的合约地址';
+                verificationDiv.style.display = 'block';
+                addBtn.disabled = true;
+                return;
+            }
+            
+            try {
+                const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
+                
+                // 验证代币信息
+                const name = await tokenContract.name();
+                const symbol = await tokenContract.symbol();
+                const decimals = await tokenContract.decimals();
+                const totalSupply = await tokenContract.totalSupply();
+                
+                verificationDiv.className = 'alert alert-success';
+                verificationDiv.innerHTML = `
+                    <h6><i class="fas fa-check-circle me-2"></i>代币验证成功</h6>
+                    <div class="row">
+                        <div class="col-6"><strong>名称:</strong> ${name}</div>
+                        <div class="col-6"><strong>符号:</strong> ${symbol}</div>
+                        <div class="col-6"><strong>精度:</strong> ${decimals}</div>
+                        <div class="col-6"><strong>总供应:</strong> ${ethers.utils.formatUnits(totalSupply, decimals)}</div>
+                    </div>
+                `;
+                verificationDiv.style.display = 'block';
+                addBtn.disabled = false;
+                
+                // 存储验证结果以供添加时使用
+                window.verifiedToken = {
+                    address: address,
+                    name: name,
+                    symbol: symbol,
+                    decimals: decimals
+                };
+                
+            } catch (error) {
+                console.error('验证代币失败:', error);
+                verificationDiv.className = 'alert alert-danger';
+                verificationDiv.innerHTML = `<strong>错误:</strong> 无法验证代币合约 - ${error.message}`;
+                verificationDiv.style.display = 'block';
+                addBtn.disabled = true;
+            }
+        }
+
+        // 添加代币
+        function addToken() {
+            if (!window.verifiedToken) {
+                alert('请先验证代币');
+                return;
+            }
+            
+            try {
+                saveTokenToLocal(window.verifiedToken.address, window.verifiedToken);
+                showNetworkStatus('success', `代币 ${window.verifiedToken.symbol} 添加成功！`);
+                
+                // 关闭模态框并刷新数据
+                bootstrap.Modal.getInstance(document.getElementById('addTokenModal')).hide();
+                loadAllTokens();
+                
+                // 清理
+                document.getElementById('token-address-input').value = '';
+                document.getElementById('token-verification').style.display = 'none';
+                document.getElementById('add-token-btn').disabled = true;
+                window.verifiedToken = null;
+                
+            } catch (error) {
+                console.error('添加代币失败:', error);
+                showNetworkStatus('error', '添加代币失败: ' + error.message);
             }
         }
 
